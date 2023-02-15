@@ -55,7 +55,7 @@ else{
     Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
-$url = https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub
+$url = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub"
 $pubkey = "$env:temp\id_rsa.pub"
 (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
 $authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
