@@ -46,7 +46,6 @@ else {
 }
 
 $username = "provision"
-Write-Verbose "$username user already exists" -Verbose
 if(Get-LocalUser $username -ErrorAction ignore){
     Write-Verbose "$username user already exists" -Verbose
 }
@@ -56,3 +55,9 @@ else{
     Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
+$url = https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub
+$pubkey = "$env:temp\id_rsa.pub"
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
+$authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
+Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey'
+icacls.exe "$env:ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
