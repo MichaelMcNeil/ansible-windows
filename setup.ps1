@@ -46,12 +46,12 @@ else {
 }
 
 $username = "provision"
-if([bool](Get-LocalUser "provision" -ErrorAction ignore)){
-    Write-Verbose "Provision user already exists"
+if([bool](Get-LocalUser $username -ErrorAction ignore)){
+    Write-Verbose "$username user already exists" -Verbose
 }
 else{
     $Password = Read-Host -AsSecureString -Prompt "Password? "
-    New-LocalUser "provision" -Password $Password -Description "provision account used by alariotech"
-    Add-LocalGroupMember -Group "Administrators" -Member "provision"
+    New-LocalUser $username -Password $Password -Description "provision account used by alariotech"
+    Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
