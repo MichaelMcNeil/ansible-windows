@@ -45,7 +45,13 @@ else {
     }
 }
 
-$Password = Read-Host -AsSecureString
-New-LocalUser "provision" -Password $Password -Description "provision account used by alariotech"
-Add-LocalGroupMember -Group "Administrators" -Member "provision"
+
+if([bool](Get-LocalUser $username -ErrorAction ignore)){
+    Write-Verbose "Provision user already exists"
+}
+else{
+    $Password = Read-Host -AsSecureString -Prompt "Password? "
+    New-LocalUser "provision" -Password $Password -Description "provision account used by alariotech"
+    Add-LocalGroupMember -Group "Administrators" -Member "provision"
+}
 
