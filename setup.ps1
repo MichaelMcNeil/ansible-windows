@@ -44,3 +44,8 @@ else {
         Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
     }
 }
+
+$Password = Read-Host -AsSecureString
+New-LocalUser "provision" -Password $Password -Description "provision account used by alariotech"
+Add-LocalGroupMember -Group "Administrators" -Member "provision"
+
