@@ -46,6 +46,7 @@ else {
 }
 
 $username = "provision"
+Write-Verbose "$username user already exists" -Verbose
 if(Get-LocalUser $username -ErrorAction ignore){
     Write-Verbose "$username user already exists" -Verbose
 }
