@@ -46,7 +46,7 @@ else {
 }
 
 $username = "provision"
-if([bool](Get-LocalUser $username -ErrorAction ignore)){
+if(Get-LocalUser $username -ErrorAction ignore){
     Write-Verbose "$username user already exists" -Verbose
 }
 else{
