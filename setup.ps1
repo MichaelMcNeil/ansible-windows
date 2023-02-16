@@ -96,9 +96,7 @@ $acl = Get-ACL -Path $openSSHAuthorizedKeys
 $ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
 "NT Authority\Authenticated Users", "ReadAndExecute", "Allow")
 $acl.RemoveAccessRule($ar)
-$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
-"BUILTIN\Administrators", "FullControl", "Allow")
-$acl.RemoveAccessRule($ar)
+
 $ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
 "BUILTIN\Users", "FullControl", "Allow")
 $acl.RemoveAccessRule($ar)
@@ -108,15 +106,11 @@ Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
 Disable-ScheduledTask -TaskName "Download Key Pair"
 
 $sshdConfigContent = @"
-# Modified sshd_config, created by Packer provisioner
+# Modified sshd_config
 
 PasswordAuthentication yes
 PubKeyAuthentication yes
-PidFile __PROGRAMDATA__/ssh/logs/sshd.pid
-AuthorizedKeysFile __PROGRAMDATA__/ssh/authorized_keys
-AllowUsers Administrator
-
-Subsystem       sftp    sftp-server.exe
+AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
 "@
 
 Set-Content -Path C:\ProgramData\ssh\sshd_config `
