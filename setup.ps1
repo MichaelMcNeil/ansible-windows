@@ -38,7 +38,13 @@ else {
     Write-Verbose "Confirm the Firewall rule is configured..." -Verbose
     if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
         Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
-        New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+        New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' `
+            -DisplayName 'OpenSSH Server (sshd)' `
+            -Enabled True `
+            -Direction Inbound `
+            -Protocol TCP `
+            -Action Allow `
+            -LocalPort 22
     }
     else {
         Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
@@ -55,9 +61,84 @@ else{
     Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
-$url = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub"
-$pubkey = "$env:temp\id_rsa.pub"
-(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
-$authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
-Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey'
-icacls $env:ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
+
+$keyDownloadScript = @'
+
+$openSSHAuthorizedKeys = 'c:\ProgramData\ssh\administrators_authorized_keys'
+
+$keyUrl = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub"
+$keyReq = [System.Net.WebRequest]::Create($keyUrl)
+$keyResp = $keyReq.GetResponse()
+$keyRespStream = $keyResp.getResponseStream()
+$streamReader = New-Object System.IO.StreamReader $keyRespStream
+$keyMaterial | Out-File -Append -FilePath $openSSHAuthorizedKeys -Encoding ASCII
+
+
+# $pubkey = "$env:temp\id_rsa.pub"
+# (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
+# $authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
+# Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey'
+
+#Ensure Access Control
+$acl = Get-ACL -Path $openSSHAuthorizedKeys
+$acl.SetAccessRuleProtection($True, $True)
+Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
+
+$acl = Get-ACL -Path $openSSHAuthorizedKeys
+$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
+"NT Authority\Authenticated Users", "ReadAndExecute", "Allow")
+$acl.RemoveAccessRule($ar)
+$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
+"BUILTIN\Administrators", "FullControl", "Allow")
+$acl.RemoveAccessRule($ar)
+$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
+"BUILTIN\Users", "FullControl", "Allow")
+$acl.RemoveAccessRule($ar)
+Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
+
+
+Disable-ScheduledTask -TaskName "Download Key Pair"
+
+$sshdConfigContent = @"
+# Modified sshd_config, created by Packer provisioner
+
+PasswordAuthentication yes
+PubKeyAuthentication yes
+PidFile __PROGRAMDATA__/ssh/logs/sshd.pid
+AuthorizedKeysFile __PROGRAMDATA__/ssh/authorized_keys
+AllowUsers Administrator
+
+Subsystem       sftp    sftp-server.exe
+"@
+
+Set-Content -Path C:\ProgramData\ssh\sshd_config `
+    -Value $sshdConfigContent
+
+'@
+
+$keyDownloadScript | Out-File $openSSHDownloadKeyScript
+
+# Create Task - Ensure the name matches the verbatim version above
+$taskName = "Download Key Pair"
+$principal = New-ScheduledTaskPrincipal `
+    -UserID "NT AUTHORITY\SYSTEM" `
+    -LogonType ServiceAccount `
+    -RunLevel Highest
+$action = New-ScheduledTaskAction -Execute 'Powershell.exe' `
+  -Argument "-NoProfile -File ""$openSSHDownloadKeyScript"""
+$trigger =  New-ScheduledTaskTrigger -AtStartup
+Register-ScheduledTask -Action $action `
+    -Trigger $trigger `
+    -Principal $principal `
+    -TaskName $taskName `
+    -Description $taskName
+Disable-ScheduledTask -TaskName $taskName
+
+# Run the install script, terminate if it fails
+& Powershell.exe -ExecutionPolicy Bypass -File $openSSHDownloadKeyScript
+if ($LASTEXITCODE -ne 0) {
+	throw("Failed to download key pair")
+}
+
+
+# icacls $env:ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
