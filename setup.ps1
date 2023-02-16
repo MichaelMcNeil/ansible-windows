@@ -61,88 +61,11 @@ else{
     Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
-# Set various known paths
-$openSSHZip = Join-Path $env:TEMP 'OpenSSH.zip'
-$openSSHInstallDir = 'C:\Windows\System32\OpenSSH'
-$openSSHInstallScript = Join-Path $openSSHInstallDir 'install-sshd.ps1'
-$openSSHDownloadKeyScript = Join-Path $openSSHInstallDir 'download-key-pair.ps1'
-$openSSHDaemon = Join-Path $openSSHInstallDir 'sshd.exe'
-$openSSHDaemonConfig = [io.path]::combine($env:ProgramData, 'ssh', 'sshd_config')
+
+$pubkey = "$env:temp\id_rsa.pub"
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
+$authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
+Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value $authorizedKey
 
 
-$keyDownloadScript = @'
-
-$openSSHAuthorizedKeys = 'c:\ProgramData\ssh\administrators_authorized_keys'
-
-$keyUrl = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/id_rsa.pub"
-$keyReq = [System.Net.WebRequest]::Create($keyUrl)
-$keyResp = $keyReq.GetResponse()
-$keyRespStream = $keyResp.getResponseStream()
-$streamReader = New-Object System.IO.StreamReader $keyRespStream
-$keyMaterial | Out-File -Append -FilePath $openSSHAuthorizedKeys -Encoding ASCII
-
-
-# $pubkey = "$env:temp\id_rsa.pub"
-# (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
-# $authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
-# Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey'
-
-#Ensure Access Control
-$acl = Get-ACL -Path $openSSHAuthorizedKeys
-$acl.SetAccessRuleProtection($True, $True)
-Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
-
-$acl = Get-ACL -Path $openSSHAuthorizedKeys
-$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
-"NT Authority\Authenticated Users", "ReadAndExecute", "Allow")
-$acl.RemoveAccessRule($ar)
-$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
-"BUILTIN\Administrators", "ReadAndExecute", "Allow")
-$acl.AddAccessRule($ar)
-$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
-"BUILTIN\Users", "FullControl", "Allow")
-$acl.RemoveAccessRule($ar)
-Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
-
-
-Disable-ScheduledTask -TaskName "Download Key Pair"
-
-$sshdConfigContent = @"
-# Modified sshd_config, 
-
-PasswordAuthentication yes
-PubKeyAuthentication yes
-AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
-"@
-
-Set-Content -Path C:\ProgramData\ssh\sshd_config `
-    -Value $sshdConfigContent
-
-'@
-
-$keyDownloadScript | Out-File $openSSHDownloadKeyScript
-
-# Create Task - Ensure the name matches the verbatim version above
-$taskName = "Download Key Pair"
-$principal = New-ScheduledTaskPrincipal `
-    -UserID "NT AUTHORITY\SYSTEM" `
-    -LogonType ServiceAccount `
-    -RunLevel Highest
-$action = New-ScheduledTaskAction -Execute 'Powershell.exe' `
-  -Argument "-NoProfile -File ""$openSSHDownloadKeyScript"""
-$trigger =  New-ScheduledTaskTrigger -AtStartup
-Register-ScheduledTask -Action $action `
-    -Trigger $trigger `
-    -Principal $principal `
-    -TaskName $taskName `
-    -Description $taskName
-Disable-ScheduledTask -TaskName $taskName
-
-# Run the install script, terminate if it fails
-& Powershell.exe -ExecutionPolicy Bypass -File $openSSHDownloadKeyScript
-if ($LASTEXITCODE -ne 0) {
-	throw("Failed to download key pair")
-}
-
-
-# icacls $env:ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
+icacls $env:ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
