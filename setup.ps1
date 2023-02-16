@@ -66,6 +66,7 @@ $keyUrl = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/maste
 $pubkey = "$env:temp\id_rsa.pub"
 (New-Object -TypeName System.Net.WebClient).DownloadFile($keyUrl, $pubkey)
 $authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
+Write-Verbose "Key is $authorizedKey" -Verbose
 Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value $authorizedKey
 
 
