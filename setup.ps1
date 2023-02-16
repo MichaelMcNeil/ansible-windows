@@ -96,7 +96,9 @@ $acl = Get-ACL -Path $openSSHAuthorizedKeys
 $ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
 "NT Authority\Authenticated Users", "ReadAndExecute", "Allow")
 $acl.RemoveAccessRule($ar)
-
+$ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
+"BUILTIN\Administrators", "ReadAndExecute", "Allow")
+$acl.AddAccessRule($ar)
 $ar = New-Object System.Security.AccessControl.FileSystemAccessRule( `
 "BUILTIN\Users", "FullControl", "Allow")
 $acl.RemoveAccessRule($ar)
@@ -106,7 +108,7 @@ Set-Acl -Path $openSSHAuthorizedKeys -AclObject $acl
 Disable-ScheduledTask -TaskName "Download Key Pair"
 
 $sshdConfigContent = @"
-# Modified sshd_config
+# Modified sshd_config, 
 
 PasswordAuthentication yes
 PubKeyAuthentication yes
