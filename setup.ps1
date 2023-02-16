@@ -63,7 +63,7 @@ else{
 
 # Set various known paths
 $openSSHZip = Join-Path $env:TEMP 'OpenSSH.zip'
-$openSSHInstallDir = Join-Path $env:ProgramFiles 'OpenSSH'
+$openSSHInstallDir = Join-Path $env:Windows\System32 'OpenSSH'
 $openSSHInstallScript = Join-Path $openSSHInstallDir 'install-sshd.ps1'
 $openSSHDownloadKeyScript = Join-Path $openSSHInstallDir 'download-key-pair.ps1'
 $openSSHDaemon = Join-Path $openSSHInstallDir 'sshd.exe'
