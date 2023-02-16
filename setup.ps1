@@ -59,4 +59,5 @@ $url = "https://raw.githubusercontent.com/MichaelMcNeil/ansible-windows/master/i
 $pubkey = "$env:temp\id_rsa.pub"
 (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $pubkey)
 $authorizedKey = Get-Content -Path $env:temp\id_rsa.pub
-Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey';icacls.exe ""$env:ProgramData\ssh\administrators_authorized_keys"" /inheritance:r /grant ""Administrators:F"" /grant ""SYSTEM:F""
+Add-Content -Force -Path $env:ProgramData\ssh\administrators_authorized_keys -Value '$authorizedKey'
+icacls $env:ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"
