@@ -61,6 +61,14 @@ else{
     Add-LocalGroupMember -Group "Administrators" -Member $username
 }
 
+# Set various known paths
+$openSSHZip = Join-Path $env:TEMP 'OpenSSH.zip'
+$openSSHInstallDir = Join-Path $env:ProgramFiles 'OpenSSH'
+$openSSHInstallScript = Join-Path $openSSHInstallDir 'install-sshd.ps1'
+$openSSHDownloadKeyScript = Join-Path $openSSHInstallDir 'download-key-pair.ps1'
+$openSSHDaemon = Join-Path $openSSHInstallDir 'sshd.exe'
+$openSSHDaemonConfig = [io.path]::combine($env:ProgramData, 'ssh', 'sshd_config')
+
 
 $keyDownloadScript = @'
 
